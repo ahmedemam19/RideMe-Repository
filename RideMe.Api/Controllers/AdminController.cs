@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RideMe.Api.Dtos;
+using RideMe.Api.Token;
 using RideMe.Core.Interfaces;
 using RideMe.Core.Models;
 
@@ -18,6 +19,7 @@ namespace RideMe.Api.Controllers
 		private readonly IGenericRepository<Admin> _adminsRepo;
 		private readonly IGenericRepository<User> _usersRepo;
 		private readonly IGenericRepository<UserStatus> _userStatusRepo;
+		private readonly HashingFunctions _hashFunctions;
 
 		public AdminController(
 			IGenericRepository<Driver> driversRepo,
@@ -37,6 +39,7 @@ namespace RideMe.Api.Controllers
 			_adminsRepo = adminsRepo;
 			_usersRepo = usersRepo;
 			_userStatusRepo = userStatusRepo;
+			_hashFunctions = new HashingFunctions();
 		}
 
 
@@ -228,17 +231,19 @@ namespace RideMe.Api.Controllers
 
 
 		[HttpPost("add-admin")] // POST : /api/Admin/add-admin
-		public async Task<ActionResult> AddAdmin(AddPassengerDto dto)
+		public async Task<ActionResult> AddAdmin(AddAdminDto dto)
 		{
 			Admin? adminCheck = await _adminsRepo.FindAsync(a => a.Email == dto.Email);
 
 			if (adminCheck is not null) return BadRequest("This email already exists !!");
 
+			var hashedpassword = _hashFunctions.HashPassword(dto.Password);
+
 			var admin = new Admin
 			{
 				Name = dto.Name,
 				Email = dto.Email,
-				Password = dto.Password
+				Password = hashedpassword
 			};
 
 			await _adminsRepo.AddAsync(admin);

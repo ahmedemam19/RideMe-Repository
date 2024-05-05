@@ -8,7 +8,9 @@ using RideMe.Core.Interfaces;
 using RideMe.Core.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace RideMe.Api.Controllers
 {
@@ -22,6 +24,8 @@ namespace RideMe.Api.Controllers
 		private readonly IGenericRepository<Passenger> _passengerRepo;
 		private readonly IGenericRepository<Admin> _adminsRepo;
 		private readonly TokenService _tokenService; 
+		private readonly HashingFunctions _hashFunctions; 
+
 
 		public UsersController( 
 					IGenericRepository<City> cityRepo,
@@ -36,6 +40,7 @@ namespace RideMe.Api.Controllers
 			_passengerRepo = passengerRepo;
 			_adminsRepo = adminsRepo;
 			_tokenService = new TokenService();
+			_hashFunctions = new HashingFunctions();
 		}
 
 
@@ -59,12 +64,14 @@ namespace RideMe.Api.Controllers
 			User? checkUser = await _usersRepo.FindAsync(u => u.Email == dto.Email);
 			if(checkUser is not null) return BadRequest("this email already exists");
 
+			var hashedpassword = _hashFunctions.HashPassword(dto.Password);
+
 			User user = new User
 			{
 				Name = dto.Name,
 				PhoneNumber = dto.PhoneNumber,
 				Email = dto.Email,
-				Password = dto.Password,
+				Password = hashedpassword,
 				RoleId = 1,
 				StatusId = 1
 			};
@@ -94,12 +101,14 @@ namespace RideMe.Api.Controllers
 			User? userCheck = await _usersRepo.FindAsync(u => u.Email == dto.Email);
 			if(userCheck is not null) return BadRequest("this email already exists");
 
+			var hashedpassword = _hashFunctions.HashPassword(dto.Password);
+
 			User user = new User
 			{
 				Name = dto.Name,
 				PhoneNumber = dto.PhoneNumber,
 				Email = dto.Email,
-				Password = dto.Password,
+				Password = hashedpassword,
 				RoleId = 2,
 				StatusId = 1
 			};
@@ -122,61 +131,77 @@ namespace RideMe.Api.Controllers
 		[HttpPost("login")] // POST: /api/Users/login
 		public async Task<ActionResult> Login(LoginDto dto)
 		{
-			User? user = await _usersRepo.FindAsync(u => u.Email == dto.Email && u.Password == dto.Password);
+			User? user = await _usersRepo.FindAsync(u => u.Email == dto.Email);
+
 			if (user != null)
 			{
-				if (user.RoleId == 1)
+				if (_hashFunctions.verifyPassword(user.Password, dto.Password))
 				{
-
-					var driver = await _driversRepo.FindAllWithIncludesAsync(d => d.UserId == user.Id, d => d.User);
-					var driverDto = driver.Select(d => new DriverTokenDto
+					if (user.RoleId == 1)
 					{
-						Id = d.Id,
-						UserId = d.UserId,
-						Email = d.User.Email,
-						Name = d.User.Name,
-						Role = d.User.Role.Name,
-						Status = d.User.Status.Name,
-						PhoneNumber = d.User.PhoneNumber,
-						CarType = d.CarType,
-						Smoking = d.Smoking,
-						City = d.City.Name,
-						Region = d.Region,
-						Available = d.Available,
-						Rating = d.AvgRating
-					}).FirstOrDefault();
 
-					var token = _tokenService.CreateDriverToken(driverDto);
-					return Ok(token);
+						var driver = await _driversRepo.FindAllWithIncludesAsync(d => d.UserId == user.Id, d => d.User);
+						var driverDto = driver.Select(d => new DriverTokenDto
+						{
+							Id = d.Id,
+							UserId = d.UserId,
+							Email = d.User.Email,
+							Name = d.User.Name,
+							Role = d.User.Role.Name,
+							Status = d.User.Status.Name,
+							PhoneNumber = d.User.PhoneNumber,
+							CarType = d.CarType,
+							Smoking = d.Smoking,
+							City = d.City.Name,
+							Region = d.Region,
+							Available = d.Available,
+							Rating = d.AvgRating
+						}).FirstOrDefault();
 
+						var token = _tokenService.CreateDriverToken(driverDto);
+						return Ok(token);
+
+					}
+					else
+					{
+
+						var passenger = await _passengerRepo.FindAllWithIncludesAsync(p => p.UserId == user.Id, p => p.User);
+						var passengerDto = passenger.Select(p => new PassengerTokenDto
+						{
+							Id = p.Id,
+							UserId = p.UserId,
+							Email = p.User.Email,
+							Name = p.User.Name,
+							Role = p.User.Role.Name,
+							Status = p.User.Status.Name,
+							PhoneNumber = p.User.PhoneNumber,
+						}).FirstOrDefault();
+
+						var token = _tokenService.CreatePassengerToken(passengerDto);
+						return Ok(token);
+					} 
 				}
 				else
 				{
-
-					var passenger = await _passengerRepo.FindAllWithIncludesAsync(p => p.UserId == user.Id, p => p.User);
-					var passengerDto = passenger.Select(p => new PassengerTokenDto
-					{
-						Id = p.Id,
-						UserId = p.UserId,
-						Email = p.User.Email,
-						Name = p.User.Name,
-						Role = p.User.Role.Name,
-						Status = p.User.Status.Name,
-						PhoneNumber = p.User.PhoneNumber,
-					}).FirstOrDefault();
-
-					var token = _tokenService.CreatePassengerToken(passengerDto);
-					return Ok(token);
+					return Unauthorized("wrong email or password");
 				}
 			}
 			else
 			{
 
-				Admin? admin = await _adminsRepo.FindAsync(a => a.Email == dto.Email && a.Password == dto.Password);
+				Admin? admin = await _adminsRepo.FindAsync(a => a.Email == dto.Email);
+				
 				if (admin is not null)
 				{
-					var token = _tokenService.CreateAdminToken(admin);
-					return Ok(token);
+					if (_hashFunctions.verifyPassword(admin.Password, dto.Password))
+					{
+						var token = _tokenService.CreateAdminToken(admin);
+						return Ok(token); 
+					}
+					else
+					{
+						return Unauthorized("wrong email or password");
+					}
 				}
 				else
 				{
@@ -186,56 +211,6 @@ namespace RideMe.Api.Controllers
 		}
 
 
-
-		#region Commented API
-
-		// hashing -> will be added to AddDriver, AddPassenger, AddAdmin & login
-	
-		/// string data = "This is some data to hash";
-		/// byte[] dataBytes = Encoding.UTF8.GetBytes(data);
-		/// 
-		/// string hashedData; string hashedData2;
-		/// 
-		/// using (var sha256 = SHA256.Create())
-		/// {
-		/// 	byte[] hash = sha256.ComputeHash(dataBytes);
-		/// 	// Convert hash to a string representation (e.g., hexadecimal)
-		/// 	hashedData = Convert.ToHexString(hash);
-		/// 	Console.WriteLine(hashedData);
-		/// }
-		/// 
-		/// string data2 = "This is some data to hash";
-		/// byte[] dataBytes2 = Encoding.UTF8.GetBytes(data);
-		/// 
-		/// using (var sha256 = SHA256.Create())
-		/// {
-		/// 	byte[] hash2 = sha256.ComputeHash(dataBytes);
-		/// 	// Convert hash to a string representation (e.g., hexadecimal)
-		/// 	hashedData2 = Convert.ToHexString(hash2);
-		/// 	Console.WriteLine(hashedData2);
-		/// }
-		/// 
-		/// bool areHashesEqual = true;
-		/// for (int i = 0; i < hashedData.Length; i++)
-		/// {
-		/// 	if (hashedData[i] != hashedData2[i])
-		/// 	{
-		/// 		areHashesEqual = false;
-		/// 		break;
-		/// 	}
-		/// }
-		/// 
-		/// if (areHashesEqual)
-		/// {
-		/// 	Console.WriteLine("Hashes are equal!");
-		/// }
-		/// else
-		/// {
-		/// 	Console.WriteLine("Hashes are different!");
-		/// }
-
-
-		#endregion
 
 
 	}
