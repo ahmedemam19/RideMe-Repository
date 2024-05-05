@@ -293,6 +293,7 @@ namespace RideMe.Api.Controllers
 			User? user = await _usersRepo.FindAsync(u => u.Id == id);
 			if (user == null) return NotFound("Wrong Id");
 			user.StatusId = 3;
+			await _usersRepo.UpdateAsync(user);
 			return Ok(user);
 		}
 
@@ -303,6 +304,7 @@ namespace RideMe.Api.Controllers
 			User? user = await _usersRepo.FindAsync(u => u.Id == id);
 			if (user == null) return NotFound("Wrong Id");
 			user.StatusId = 4;
+			await _usersRepo.UpdateAsync(user);
 			return Ok(user);
 		}
 

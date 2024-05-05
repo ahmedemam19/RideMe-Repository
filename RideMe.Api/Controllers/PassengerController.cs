@@ -62,7 +62,6 @@ namespace RideMe.Api.Controllers
 		#endregion
 
 
-		[Authorize]
 		[HttpGet("get-passenger-ride-history/{PassengerId}")] // GET: /api/Passenger/get-passenger-ride-history/{PassengerId}
 		public async Task<ActionResult> GetPassengerRideHistory(int PassengerId)
 		{
@@ -207,6 +206,8 @@ namespace RideMe.Api.Controllers
 			Driver? driver = await _driverRepo.FindAsync(d => d.Id == ride.DriverId);
 			if (driver is null) return NotFound("wrong id");
 			driver.Available = true;
+
+			await _driverRepo.UpdateAsync(driver);
 
 			return Ok(ride);
 		}
