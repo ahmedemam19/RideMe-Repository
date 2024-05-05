@@ -1,7 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 
-namespace RideMe.Api.Token
+namespace RideMe.Api.Helpers
 {
 	public class HashingFunctions
 	{

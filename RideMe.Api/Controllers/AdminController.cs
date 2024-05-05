@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RideMe.Api.Dtos;
-using RideMe.Api.Token;
+using RideMe.Api.Helpers;
 using RideMe.Core.Interfaces;
 using RideMe.Core.Models;
 

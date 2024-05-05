@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using RideMe.Api.Dtos;
-using RideMe.Api.Token;
+using RideMe.Api.Helpers;
 using RideMe.Core.Interfaces;
 using RideMe.Core.Models;
 using System.IdentityModel.Tokens.Jwt;
@@ -127,7 +127,6 @@ namespace RideMe.Api.Controllers
 		}
 
 
-
 		[HttpPost("login")] // POST: /api/Users/login
 		public async Task<ActionResult> Login(LoginDto dto)
 		{
@@ -209,8 +208,6 @@ namespace RideMe.Api.Controllers
 				}
 			}
 		}
-
-
 
 
 	}

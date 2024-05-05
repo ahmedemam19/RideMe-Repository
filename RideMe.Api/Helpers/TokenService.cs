@@ -5,7 +5,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-namespace RideMe.Api.Token
+namespace RideMe.Api.Helpers
 {
 	public class TokenService
 	{
