@@ -1,11 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using RideMe.Api.Dtos;
 using RideMe.Core.Interfaces;
 using RideMe.Core.Models;
 
 namespace RideMe.Api.Controllers
 {
+	[Authorize(Roles = "passenger")]
 	[Route("api/[controller]")]
 	[ApiController]
 	public class PassengerController : ControllerBase
@@ -62,6 +64,7 @@ namespace RideMe.Api.Controllers
 		#endregion
 
 
+		[Authorize(Roles = "passenger")]
 		[HttpGet("get-passenger-ride-history/{PassengerId}")] // GET: /api/Passenger/get-passenger-ride-history/{PassengerId}
 		public async Task<ActionResult> GetPassengerRideHistory(int PassengerId)
 		{
@@ -138,6 +141,9 @@ namespace RideMe.Api.Controllers
 				rating = d.AvgRating
 			}).ToList();
 
+			if (driversDetails == null)
+				return Ok("No avaiable drivers");
+
 			return Ok(driversDetails);
 		}
 
@@ -194,17 +200,50 @@ namespace RideMe.Api.Controllers
 		}
 
 
-		[HttpPut("confirm-payment/{id}")] // PUT: /api/Passenger/confirm-payment/{id}
-		public async Task<ActionResult> ConfirmPayment(int id)
+
+
+		[HttpPost("rate-ride")] // POST: /api/Passenger/rate-ride
+		public async Task<ActionResult> addRatingAsync(RateAndFeedbackDto dto)
+		{
+			Ride? ride = await _rideRepo.FindAsync(r => r.Id == dto.Id);
+			if(ride is null) return NotFound("wrong id");
+
+			if (dto.Rating < 0 || dto.Rating > 5)
+				return BadRequest("Rating must be between 0 and 5");
+
+			ride.Rating = dto.Rating;
+
+			ride.Feedback = dto.Feedback;
+
+			var response = new
+			{
+				id = ride.Id,
+				rating = ride.Rating,
+				feedback = ride.Feedback
+			};
+
+			await _rideRepo.UpdateAsync(ride);
+
+			return Ok(response);
+
+		}
+
+
+
+
+		[HttpPut("confirm-payment/{rideId}")] // PUT: /api/Passenger/confirm-payment/{id}
+		public async Task<ActionResult> ConfirmPayment(int rideId)
 		{
 			// make the ride completed
-			Ride? ride = await _rideRepo.FindAsync(r => r.Id == id);
+			Ride? ride = await _rideRepo.FindAsync(r => r.Id == rideId);
 			if(ride is null) return NotFound("wrong id");
 			ride.StatusId = 4;
 
 			// make the driver available
 			Driver? driver = await _driverRepo.FindAsync(d => d.Id == ride.DriverId);
+
 			if (driver is null) return NotFound("wrong id");
+
 			driver.Available = true;
 
 			await _driverRepo.UpdateAsync(driver);

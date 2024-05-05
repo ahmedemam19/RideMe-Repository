@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using RideMe.Api.Dtos;
 using RideMe.Core.Interfaces;
 using RideMe.Core.Models;
@@ -132,7 +133,7 @@ namespace RideMe.Api.Controllers
 			return Ok(driverDetails);
 		}
 
-
+		[Authorize(Roles = "admin")]
 		[HttpGet("get-all-rides")] // GET : /api/Admin/get-all-rides
 		public async Task<ActionResult> GetAllRides()
 		{

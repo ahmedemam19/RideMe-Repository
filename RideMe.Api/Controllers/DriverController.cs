@@ -97,7 +97,7 @@ namespace RideMe.Api.Controllers
 		}
 
 
-		[HttpGet("get-driver-daily-income")] // GET: /api/Driver/get-driver-daily-income
+		[HttpPost("get-driver-daily-income")] // POST: /api/Driver/get-driver-daily-income
 		public async Task<ActionResult> GetDriversDailyIncome(DailyIncomeDto dto)
 		{
 			DateOnly date = DateOnly.Parse(dto.DateString);
@@ -105,7 +105,8 @@ namespace RideMe.Api.Controllers
 			var driverRides = await _ridesRepo.FindAllAsync(r => (r.DriverId == dto.DriverId) &&
 																 (r.RideDate.Day == date.Day) &&
 																 (r.RideDate.Month == date.Month) &&
-																 (r.RideDate.Year == date.Year));
+																 (r.RideDate.Year == date.Year) && 
+																 (r.StatusId == 4));
 
 			double income = 0;
 
@@ -115,10 +116,10 @@ namespace RideMe.Api.Controllers
 		}
 
 
-		[HttpGet("get-driver-monthly-income")] // GET: /api/Driver/get-driver-monthly-income
+		[HttpPost("get-driver-monthly-income")] // POST: /api/Driver/get-driver-monthly-income
 		public async Task<ActionResult> GetDriversMonthlyIncome(MonthlyIncomeDto dto)
 		{
-			var driverRides = await _ridesRepo.FindAllAsync(r => (r.DriverId == dto.DriverId));
+			var driverRides = await _ridesRepo.FindAllAsync(r => (r.DriverId == dto.DriverId) && (r.StatusId == 4));
 
 			double income = 0;
 
