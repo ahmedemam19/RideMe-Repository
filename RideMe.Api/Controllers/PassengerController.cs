@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using RideMe.Api.Dtos;
 using RideMe.Core.Interfaces;
 using RideMe.Core.Models;
@@ -215,6 +216,8 @@ namespace RideMe.Api.Controllers
 
 			ride.Feedback = dto.Feedback;
 
+			await _rideRepo.UpdateAsync(ride);
+
 			var response = new
 			{
 				id = ride.Id,
@@ -222,11 +225,37 @@ namespace RideMe.Api.Controllers
 				feedback = ride.Feedback
 			};
 
-			await _rideRepo.UpdateAsync(ride);
+
+			// calculating avg rating for driver part
+			var driverId = ride.DriverId;
+
+
+			var driverRatings = (await _rideRepo.FindAllAsync(d => d.DriverId == driverId && d.Rating != -1.0))
+				.Select(d => d.Rating).ToList();
+
+			//var selectedRating = driverRatings.Select(d => d.Rating).ToList();
+
+
+			// calculate average rating
+			double averageRating = driverRatings.Any() ? driverRatings.Average() ?? 0 : 0;
+			double formattedRating = Math.Round(averageRating, 2, MidpointRounding.AwayFromZero);
+
+			// update the average rating in the driver table
+			Driver? driver = await _driverRepo.FindAsync(d => d.Id == driverId);
+			if (driver != null)
+			{
+				// Store the formatted rating (rounded to two decimal places) as a double in the database
+				driver.AvgRating = formattedRating;
+				await _rideRepo.UpdateAsync(ride);
+			}
 
 			return Ok(response);
 
 		}
+
+
+
+		
 
 
 
