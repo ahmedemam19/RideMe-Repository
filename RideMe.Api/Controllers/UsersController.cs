@@ -86,7 +86,8 @@ namespace RideMe.Api.Controllers
 				Region = dto.Region,
 				CarType = dto.CarType,
 				Smoking = dto.Smoking,
-				Available = false
+				Available = false,
+				AvgRating = -1
 			};
 
 			await _driversRepo.AddAsync(driver);
