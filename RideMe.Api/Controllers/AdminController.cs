@@ -140,7 +140,7 @@ namespace RideMe.Api.Controllers
 		[HttpGet("get-all-rides")] // GET : /api/Admin/get-all-rides
 		public async Task<ActionResult> GetAllRides()
 		{
-			var rides = await _ridesRepo.FindAllWithIncludesAsync(
+			var rides = await _ridesRepo.FindAllWithIncludesAsyncc(
 						r => r.Status,
 						r => r.Passenger,
 						r => r.Driver
@@ -177,7 +177,7 @@ namespace RideMe.Api.Controllers
 				Name = p.User.Name,
 				Email = p.User.Email,
 				PhoneNumber = p.User.PhoneNumber,
-			}).ToList();
+			});
 
 			return Ok(passengerDetails);
 		}
@@ -186,21 +186,21 @@ namespace RideMe.Api.Controllers
 		[HttpGet("get-waiting-drivers")] // GET : /api/Admin/get-waiting-drivers
 		public async Task<ActionResult> GetWaitingDrivers()
 		{
-			var drivers = await _driversRepo.FindAllWithIncludesAsync(d => d.User.StatusId == 1, d => d.User);
+			var drivers = await _driversRepo.FindAllWithIncludesAsync(d => d.User.StatusId == 1, d => d.User, d => d.City, d => d.User.Status);
 
 			var driverDetails = drivers.Select(d => new
 			{
-				Id = d.User.Id,
-				Name = d.User.Name,
-				PhoneNumber = d.User.PhoneNumber,
-				Email = d.User.Email,
-				Status = d.User.Status.Name,
+				Id = d.User?.Id,
+				Name = d.User?.Name,
+				PhoneNumber = d.User?.PhoneNumber,
+				Email = d.User?.Email,
+				Status = d.User?.Status.Name,
 				CarType = d.CarType,
 				IsSmoking = d.Smoking,
-				City = d.City.Name,
+				City = d.City?.Name,
 				Region = d.Region,
 				IsAvailable = d.Available
-			}).ToList();
+			});
 
 			return Ok(driverDetails);
 		}

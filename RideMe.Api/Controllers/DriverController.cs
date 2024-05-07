@@ -14,13 +14,19 @@ namespace RideMe.Api.Controllers
 	{
 		private readonly IGenericRepository<Ride> _ridesRepo;
 		private readonly IGenericRepository<Driver> _driversRepo;
+		private readonly IGenericRepository<Passenger> _passengersRepo;
+		private readonly IGenericRepository<User> _usersRepo;
 
 		public DriverController(
 				IGenericRepository<Ride> ridesRepo,
-				IGenericRepository<Driver> driversRepo)
+				IGenericRepository<Driver> driversRepo,
+				IGenericRepository<Passenger> passengersRepo,
+				IGenericRepository<User> usersRepo)
         {
 			_ridesRepo = ridesRepo;
 			_driversRepo = driversRepo;
+			_passengersRepo = passengersRepo;
+			_usersRepo = usersRepo;
 		}
 
 
@@ -49,6 +55,12 @@ namespace RideMe.Api.Controllers
 		public async Task<IActionResult> GetRideStatusAsync(int rideId)
 		{
 			var rides = await _ridesRepo.FindAllWithIncludesAsync(r => r.Id == rideId, r => r.StatusId);
+
+			var ride = rides.FirstOrDefault();
+			if (ride == null)
+			{
+				return NotFound("Invalid ride ID");
+			}
 
 			var rideStatus = rides.Select(r => new
 			{
@@ -172,12 +184,28 @@ namespace RideMe.Api.Controllers
 			ride.StatusId = 3;
 			await _ridesRepo.UpdateAsync(ride);
 
-			// rejecting other requested rides
+			// rejecting other driver requested rides
 			Driver? driver = await _driversRepo.FindAsync(d => d.Id == ride.DriverId);
 
-			var otherRides = await _ridesRepo.FindAllAsync(r => r.DriverId == ride.DriverId && r.StatusId == 1);
+			if (driver == null) return NotFound("Driver not found");
 
-			foreach (var otherRide in otherRides)
+			var otherDriverRides = await _ridesRepo.FindAllAsync(r => r.DriverId == ride.DriverId && r.StatusId == 1);
+
+			foreach (var otherRide in otherDriverRides)
+			{
+				otherRide.StatusId = 2;
+				await _ridesRepo.UpdateAsync(otherRide);
+			}
+
+
+			// rejecting other passenger requested rides
+			Passenger? passenger = await _passengersRepo.FindAsync(p => p.Id == ride.PassengerId);
+
+			if (passenger == null) return NotFound("Passenger not found");
+
+			var otherPassengerRides = await _ridesRepo.FindAllAsync(r => r.PassengerId == ride.PassengerId && r.StatusId == 1);
+
+			foreach (var otherRide in otherPassengerRides)
 			{
 				otherRide.StatusId = 2;
 				await _ridesRepo.UpdateAsync(otherRide);
@@ -189,18 +217,19 @@ namespace RideMe.Api.Controllers
 
 			// returning the ride
 			var response = await _ridesRepo.FindAllWithIncludesAsync(r => r.Id == id,
-																	 r => r.Driver,
-																	 r => r.Passenger,
+																	 r => r.Driver.User,
+																	 r => r.Passenger.User,
 																	 r => r.Status);
+
 
 			var responseData = response.Select(r => new
 			{
 				RideId = r.Id,
-				Driver = r.Driver.User.Name,
-				Passenger = r.Passenger.User.Name,
+				Driver = r.Driver?.User?.Name,
+				Passenger = r.Passenger?.User?.Name,
 				Source = r.RideSource,
 				Destination = r.RideDestination,
-				Status = r.Status.Name,
+				Status = r.Status?.Name,
 				Price = r.Price,
 			}).FirstOrDefault();
 

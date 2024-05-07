@@ -23,7 +23,7 @@ namespace RideMe.Core.Interfaces
 
 		Task<T?> FindAsync(Expression<Func<T, bool>> criteria);
 
-		Task<IEnumerable<T>> FindAllWithIncludesAsync(params Expression<Func<T, object>>[] includes);
+		Task<IEnumerable<T>> FindAllWithIncludesAsyncc(params Expression<Func<T, object>>[] includes);
 
 		Task<IEnumerable<T>> FindAllWithIncludesAsync(Expression<Func<T, bool>> criteria, params Expression<Func<T, object>>[] includes);
 		
