@@ -8,6 +8,7 @@ using RideMe.Core.Models;
 
 namespace RideMe.Api.Controllers
 {
+	[Authorize(Roles = "passenger")]
 	[Route("api/Passenger")]
 	[ApiController]
 	public class PassengerController : ControllerBase
@@ -125,7 +126,7 @@ namespace RideMe.Api.Controllers
 		public async Task<ActionResult> GetAvailableDrivers()
 		{
 			var drivers = await _driverRepo.FindAllWithIncludesAsync(
-												d => d.Available == true,
+												d => d.Available == true && d.User.StatusId == 2,
 												d => d.User,
 												d => d.City);
 

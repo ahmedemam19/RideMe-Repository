@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RideMe.Api.Dtos;
@@ -8,6 +9,7 @@ using RideMe.EF.Data;
 
 namespace RideMe.Api.Controllers
 {
+	[Authorize(Roles = "driver")]
 	[Route("api/Driver")]
 	[ApiController]
 	public class DriverController : ControllerBase
