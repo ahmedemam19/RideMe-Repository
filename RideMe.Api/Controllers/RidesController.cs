@@ -6,7 +6,7 @@ using RideMe.Core.Models;
 
 namespace RideMe.Api.Controllers
 {
-	[Route("api/[controller]")]
+	[Route("api/Ride")]
 	[ApiController]
 	public class RidesController : ControllerBase
 	{

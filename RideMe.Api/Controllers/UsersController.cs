@@ -15,7 +15,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace RideMe.Api.Controllers
 {
-	[Route("api/[controller]")]
+	[Route("api/User")]
 	[ApiController]
 	public class UsersController : ControllerBase
 	{
@@ -24,7 +24,6 @@ namespace RideMe.Api.Controllers
 		private readonly IGenericRepository<Driver> _driversRepo;
 		private readonly IGenericRepository<Passenger> _passengerRepo;
 		private readonly IGenericRepository<Admin> _adminsRepo;
-		private readonly ApplicationDbContext _context;
 		private readonly TokenService _tokenService; 
 		private readonly HashingFunctions _hashFunctions; 
 
@@ -34,15 +33,13 @@ namespace RideMe.Api.Controllers
 					IGenericRepository<User> usersRepo,
 					IGenericRepository<Driver> driversRepo,
 					IGenericRepository<Passenger> passengerRepo,
-					IGenericRepository<Admin> adminsRepo,
-					ApplicationDbContext Context)
+					IGenericRepository<Admin> adminsRepo)
         {
 			_cityRepo = cityRepo;
 			_usersRepo = usersRepo;
 			_driversRepo = driversRepo;
 			_passengerRepo = passengerRepo;
 			_adminsRepo = adminsRepo;
-			_context = Context;
 			_tokenService = new TokenService();
 			_hashFunctions = new HashingFunctions();
 		}
@@ -143,16 +140,15 @@ namespace RideMe.Api.Controllers
 					if (user.RoleId == 1)
 					{
 
-						var driverDto = await _context.Drivers.Include(d => d.User)
-						.Where(d => d.UserId == user.Id)
-						.Select(d => new DriverTokenDto
+						var driver = await _driversRepo.FindAllWithIncludesAsync(d => d.UserId == user.Id, d => d.User, d => d.City, d => d.User.Status, d => d.User.Role);
+						var driverDto = driver.Select(d => new DriverTokenDto
 						{
 							Id = d.Id,
 							UserId = d.UserId,
 							Email = d.User.Email,
 							Name = d.User.Name,
-							Role = d.User.Role.Name,
-							Status = d.User.Status.Name,
+							Role = d.User?.Role.Name,
+							Status = d.User?.Status.Name,
 							PhoneNumber = d.User.PhoneNumber,
 							CarType = d.CarType,
 							Smoking = d.Smoking,
@@ -160,8 +156,8 @@ namespace RideMe.Api.Controllers
 							Region = d.Region,
 							Available = d.Available,
 							Rating = d.AvgRating
-						})
-						.FirstOrDefaultAsync();
+						}).FirstOrDefault();
+
 						var token = _tokenService.CreateDriverToken(driverDto);
 						return Ok(token);
 
@@ -169,19 +165,18 @@ namespace RideMe.Api.Controllers
 					else
 					{
 
-						var passengerDto = await _context.Passengers.Include(p => p.User)
-						.Where(p => p.UserId == user.Id)
-						.Select(p => new PassengerTokenDto
+						var passenger = await _passengerRepo.FindAllWithIncludesAsync(p => p.UserId == user.Id, p => p.User, p => p.User.Status, p => p.User.Role);
+						var passengerDto = passenger.Select(p => new PassengerTokenDto
 						{
 							Id = p.Id,
 							UserId = p.UserId,
 							Email = p.User.Email,
 							Name = p.User.Name,
-							Role = p.User.Role.Name,
-							Status = p.User.Status.Name,
+							Role = p.User?.Role.Name,
+							Status = p.User?.Status.Name,
 							PhoneNumber = p.User.PhoneNumber,
-						})
-						.FirstOrDefaultAsync();
+						}).FirstOrDefault();
+
 						var token = _tokenService.CreatePassengerToken(passengerDto);
 						return Ok(token);
 					} 

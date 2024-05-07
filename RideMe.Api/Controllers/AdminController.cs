@@ -7,7 +7,7 @@ using RideMe.Core.Models;
 
 namespace RideMe.Api.Controllers
 {
-	[Route("api/[controller]")]
+	[Route("api/Admin")]
 	[ApiController]
 	public class AdminController : ControllerBase
 	{
@@ -136,14 +136,13 @@ namespace RideMe.Api.Controllers
 			return Ok(driverDetails);
 		}
 
-		[Authorize(Roles = "admin")]
 		[HttpGet("get-all-rides")] // GET : /api/Admin/get-all-rides
 		public async Task<ActionResult> GetAllRides()
 		{
 			var rides = await _ridesRepo.FindAllWithIncludesAsyncc(
 						r => r.Status,
-						r => r.Passenger,
-						r => r.Driver
+						r => r.Passenger.User,
+						r => r.Driver.User
 						);
 
 

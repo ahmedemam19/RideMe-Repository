@@ -8,25 +8,22 @@ using RideMe.EF.Data;
 
 namespace RideMe.Api.Controllers
 {
-	[Route("api/[controller]")]
+	[Route("api/Driver")]
 	[ApiController]
 	public class DriverController : ControllerBase
 	{
 		private readonly IGenericRepository<Ride> _ridesRepo;
 		private readonly IGenericRepository<Driver> _driversRepo;
 		private readonly IGenericRepository<Passenger> _passengersRepo;
-		private readonly IGenericRepository<User> _usersRepo;
 
 		public DriverController(
 				IGenericRepository<Ride> ridesRepo,
 				IGenericRepository<Driver> driversRepo,
-				IGenericRepository<Passenger> passengersRepo,
-				IGenericRepository<User> usersRepo)
+				IGenericRepository<Passenger> passengersRepo)
         {
 			_ridesRepo = ridesRepo;
 			_driversRepo = driversRepo;
 			_passengersRepo = passengersRepo;
-			_usersRepo = usersRepo;
 		}
 
 
@@ -54,7 +51,7 @@ namespace RideMe.Api.Controllers
 		[HttpGet("get-ride-status/{rideId}")] // GET: /api/Driver/get-ride-status/{rideId}
 		public async Task<IActionResult> GetRideStatusAsync(int rideId)
 		{
-			var rides = await _ridesRepo.FindAllWithIncludesAsync(r => r.Id == rideId, r => r.StatusId);
+			var rides = await _ridesRepo.FindAllWithIncludesAsync(r => r.Id == rideId, r => r.Status);
 
 			var ride = rides.FirstOrDefault();
 			if (ride == null)
@@ -77,35 +74,28 @@ namespace RideMe.Api.Controllers
 		[HttpGet("get-current-ride-status/{DriverId}")] // GET: /api/Driver/get-current-ride-status/{DriverId}
 		public async Task<ActionResult> GetCurrentRideStatus(int DriverId)
 		{
-			try
-			{
-				var rides = await _ridesRepo.FindAllWithIncludesAsync(
+			var rides = await _ridesRepo.FindAllWithIncludesAsync(
 												r => r.DriverId == DriverId && r.StatusId == 3,
-												r => r.Driver, 
-												r => r.Passenger, 
+												r => r.Driver.User,
+												r => r.Passenger.User,
 												r => r.Status);
 
-				var selectedRide = rides.Select(r => new
-				{
-					RideId = r.Id,
-					Driver = r.Driver.User.Name,
-					Passenger = r.Passenger.User.Name,
-					PassengerPhoneNumber = r.Passenger.User.PhoneNumber,
-					Source = r.RideSource,
-					Destination = r.RideDestination,
-					Status = r.Status.Name,
-					Price = r.Price,
-					Rating = r.Rating,
-					Feedback = r.Feedback,
-					Date = r.RideDate
-				}).ToList();
-
-				return Ok(selectedRide);
-			}
-			catch (Exception ex)
+			var selectedRide = rides.Select(r => new
 			{
-				return StatusCode(500, $"An error occurred: {ex.Message}");
-			}
+				RideId = r.Id,
+				Driver = r.Driver.User.Name,
+				Passenger = r.Passenger.User.Name,
+				PassengerPhoneNumber = r.Passenger.User.PhoneNumber,
+				Source = r.RideSource,
+				Destination = r.RideDestination,
+				Status = r.Status.Name,
+				Price = r.Price,
+				Rating = r.Rating,
+				Feedback = r.Feedback,
+				Date = r.RideDate
+			}).ToList();
+
+			return Ok(selectedRide);
 		}
 
 
@@ -122,7 +112,8 @@ namespace RideMe.Api.Controllers
 
 			double income = 0;
 
-            foreach (var ride in driverRides) income += (double)ride.Price;
+            foreach (var ride in driverRides) 
+				income += (double)ride.Price;
 
 			return Ok(income);
 		}

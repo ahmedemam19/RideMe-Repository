@@ -8,8 +8,7 @@ using RideMe.Core.Models;
 
 namespace RideMe.Api.Controllers
 {
-	[Authorize(Roles = "passenger")]
-	[Route("api/[controller]")]
+	[Route("api/Passenger")]
 	[ApiController]
 	public class PassengerController : ControllerBase
 	{
@@ -65,14 +64,13 @@ namespace RideMe.Api.Controllers
 		#endregion
 
 
-		[Authorize(Roles = "passenger")]
 		[HttpGet("get-passenger-ride-history/{PassengerId}")] // GET: /api/Passenger/get-passenger-ride-history/{PassengerId}
 		public async Task<ActionResult> GetPassengerRideHistory(int PassengerId)
 		{
 			var rides = await _rideRepo.FindAllWithIncludesAsync(
 											r => r.PassengerId == PassengerId,
-											r => r.Driver,
-											r => r.Passenger,
+											r => r.Driver.User,
+											r => r.Passenger.User,
 											r => r.Status);
 
 			var rideDetails = rides.Select(r => new
@@ -99,8 +97,8 @@ namespace RideMe.Api.Controllers
 		{
 			var rides = await _rideRepo.FindAllWithIncludesAsync(
 											r => r.PassengerId == PassengerId && r.StatusId == 3 && r.RideDate.Date == DateTime.Now.Date,
-											r => r.Driver,
-											r => r.Passenger,
+											r => r.Driver.User,
+											r => r.Passenger.User,
 											r => r.Status);
 
 			var rideDetails = rides.Select(r => new
@@ -202,7 +200,6 @@ namespace RideMe.Api.Controllers
 
 
 
-
 		[HttpPost("rate-ride")] // POST: /api/Passenger/rate-ride
 		public async Task<ActionResult> addRatingAsync(RateAndFeedbackDto dto)
 		{
@@ -253,13 +250,7 @@ namespace RideMe.Api.Controllers
 
 		}
 
-
-
 		
-
-
-
-
 		[HttpPut("confirm-payment/{rideId}")] // PUT: /api/Passenger/confirm-payment/{id}
 		public async Task<ActionResult> ConfirmPayment(int rideId)
 		{
