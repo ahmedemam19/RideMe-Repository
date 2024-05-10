@@ -115,7 +115,7 @@ namespace RideMe.Api.Controllers
 		{
 			var drivers = await _driversRepo.FindAllWithIncludesAsync(
 						d => d.User.StatusId == 2 || d.User.StatusId == 4,
-						d => d.User,
+						d => d.User.Status,
 						d => d.City);
 
 			var driverDetails = drivers.Select(d => new
