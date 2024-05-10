@@ -27,13 +27,23 @@ namespace RideMe.EF
 		}
 
 
+		public async Task<T> GetByIdAsync(int id)
+			=> await _dbContext.Set<T>().FindAsync(id);
+
+
 		public async Task DeleteAsync(int id)
 		{
-			var entity = await GetByIdAsync(id);
+			var entity = await _dbContext.Set<T>().FindAsync(id);
+
 			if (entity != null)
 			{
 				_dbContext.Set<T>().Remove(entity);
 				await _dbContext.SaveChangesAsync();
+			}
+			else
+			{
+				// Handle the case where the entity with the given ID does not exist
+				throw new InvalidOperationException($"Entity with ID {id} does not exist.");
 			}
 		}
 
@@ -45,10 +55,7 @@ namespace RideMe.EF
 		}
 
 
-		public async Task<T> GetByIdAsync(int id)
-			=> await _dbContext.Set<T>().FindAsync(id);
-
-
+		
 		//  returns one object ( T ) according to specific condition ( Where ) and Include another thing to the returned object
 		public async Task<T?> FindWithIncludesAsync(Expression<Func<T, bool>> criteria, Expression<Func<T, object>>[] includes)
 		{
@@ -78,8 +85,14 @@ namespace RideMe.EF
 
 
 		//  returns IEnumerable<T> and Include another thing to the returned json
-		public async Task<IEnumerable<T>> FindAllWithIncludesAsync(params Expression<Func<T, object>>[] includes)
+		public async Task<IEnumerable<T>> FindAllWithIncludesAsyncc(params Expression<Func<T, object>>[] includes)
 		{
+
+			if (includes == null)
+			{
+				throw new ArgumentNullException(nameof(includes));
+			}
+
 			IQueryable<T> query = _dbContext.Set<T>();
 
 			foreach (var include in includes)
@@ -94,6 +107,8 @@ namespace RideMe.EF
 		//  returns IEnumerable<T> according to specific condition ( Where ) and Include another thing to the returned json
 		public async Task<IEnumerable<T>> FindAllWithIncludesAsync(Expression<Func<T, bool>> criteria, params Expression<Func<T, object>>[] includes)
 		{
+
+	
 			IQueryable<T> query = _dbContext.Set<T>().Where(criteria);
 
 			foreach (var include in includes)
@@ -103,10 +118,6 @@ namespace RideMe.EF
 
 			return await query.ToListAsync();
 		}
-
-
-		
-
 
 	}
 }

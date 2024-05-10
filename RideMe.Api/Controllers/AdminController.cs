@@ -1,11 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using RideMe.Api.Dtos;
+using RideMe.Api.Helpers;
 using RideMe.Core.Interfaces;
 using RideMe.Core.Models;
 
 namespace RideMe.Api.Controllers
 {
-	[Route("api/[controller]")]
+	[Route("api/Admin")]
 	[ApiController]
 	public class AdminController : ControllerBase
 	{
@@ -17,6 +19,7 @@ namespace RideMe.Api.Controllers
 		private readonly IGenericRepository<Admin> _adminsRepo;
 		private readonly IGenericRepository<User> _usersRepo;
 		private readonly IGenericRepository<UserStatus> _userStatusRepo;
+		private readonly HashingFunctions _hashFunctions;
 
 		public AdminController(
 			IGenericRepository<Driver> driversRepo,
@@ -36,6 +39,7 @@ namespace RideMe.Api.Controllers
 			_adminsRepo = adminsRepo;
 			_usersRepo = usersRepo;
 			_userStatusRepo = userStatusRepo;
+			_hashFunctions = new HashingFunctions();
 		}
 
 
@@ -111,7 +115,7 @@ namespace RideMe.Api.Controllers
 		{
 			var drivers = await _driversRepo.FindAllWithIncludesAsync(
 						d => d.User.StatusId == 2 || d.User.StatusId == 4,
-						d => d.User,
+						d => d.User.Status,
 						d => d.City);
 
 			var driverDetails = drivers.Select(d => new
@@ -132,14 +136,13 @@ namespace RideMe.Api.Controllers
 			return Ok(driverDetails);
 		}
 
-
 		[HttpGet("get-all-rides")] // GET : /api/Admin/get-all-rides
 		public async Task<ActionResult> GetAllRides()
 		{
-			var rides = await _ridesRepo.FindAllWithIncludesAsync(
+			var rides = await _ridesRepo.FindAllWithIncludesAsyncc(
 						r => r.Status,
-						r => r.Passenger,
-						r => r.Driver
+						r => r.Passenger.User,
+						r => r.Driver.User
 						);
 
 
@@ -173,7 +176,7 @@ namespace RideMe.Api.Controllers
 				Name = p.User.Name,
 				Email = p.User.Email,
 				PhoneNumber = p.User.PhoneNumber,
-			}).ToList();
+			});
 
 			return Ok(passengerDetails);
 		}
@@ -182,21 +185,21 @@ namespace RideMe.Api.Controllers
 		[HttpGet("get-waiting-drivers")] // GET : /api/Admin/get-waiting-drivers
 		public async Task<ActionResult> GetWaitingDrivers()
 		{
-			var drivers = await _driversRepo.FindAllWithIncludesAsync(d => d.User.StatusId == 1, d => d.User);
+			var drivers = await _driversRepo.FindAllWithIncludesAsync(d => d.User.StatusId == 1, d => d.User, d => d.City, d => d.User.Status);
 
 			var driverDetails = drivers.Select(d => new
 			{
-				Id = d.User.Id,
-				Name = d.User.Name,
-				PhoneNumber = d.User.PhoneNumber,
-				Email = d.User.Email,
-				Status = d.User.Status.Name,
+				Id = d.User?.Id,
+				Name = d.User?.Name,
+				PhoneNumber = d.User?.PhoneNumber,
+				Email = d.User?.Email,
+				Status = d.User?.Status.Name,
 				CarType = d.CarType,
 				IsSmoking = d.Smoking,
-				City = d.City.Name,
+				City = d.City?.Name,
 				Region = d.Region,
 				IsAvailable = d.Available
-			}).ToList();
+			});
 
 			return Ok(driverDetails);
 		}
@@ -227,17 +230,19 @@ namespace RideMe.Api.Controllers
 
 
 		[HttpPost("add-admin")] // POST : /api/Admin/add-admin
-		public async Task<ActionResult> AddAdmin(AddPassengerDto dto)
+		public async Task<ActionResult> AddAdmin(AddAdminDto dto)
 		{
 			Admin? adminCheck = await _adminsRepo.FindAsync(a => a.Email == dto.Email);
 
 			if (adminCheck is not null) return BadRequest("This email already exists !!");
 
+			var hashedpassword = _hashFunctions.HashPassword(dto.Password);
+
 			var admin = new Admin
 			{
 				Name = dto.Name,
 				Email = dto.Email,
-				Password = dto.Password
+				Password = hashedpassword
 			};
 
 			await _adminsRepo.AddAsync(admin);
@@ -293,6 +298,7 @@ namespace RideMe.Api.Controllers
 			User? user = await _usersRepo.FindAsync(u => u.Id == id);
 			if (user == null) return NotFound("Wrong Id");
 			user.StatusId = 3;
+			await _usersRepo.UpdateAsync(user);
 			return Ok(user);
 		}
 
@@ -303,6 +309,7 @@ namespace RideMe.Api.Controllers
 			User? user = await _usersRepo.FindAsync(u => u.Id == id);
 			if (user == null) return NotFound("Wrong Id");
 			user.StatusId = 4;
+			await _usersRepo.UpdateAsync(user);
 			return Ok(user);
 		}
 
